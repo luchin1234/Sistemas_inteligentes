@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Control Parental</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #181d2a 0%, #252a3b 100%);
+            color: #f4f6fb;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .panel-title {
+            letter-spacing: 1px;
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 2px 24px #0008;
+        }
+        .stats-card {
+            border-radius: 1.4rem;
+            background: rgba(37,42,59,0.88);
+            color: #fff;
+            box-shadow: 0 6px 32px #0004, 0 1px 0 #333;
+            transition: transform 0.13s, box-shadow 0.16s, background 0.13s;
+            padding: 2.2rem 1.2rem 1.4rem 1.2rem;
+            position: relative;
+            overflow: hidden;
+            min-height: 140px;
+            border: 1px solid #30354b;
+            cursor: pointer;
+        }
+        .stats-card:hover, .stats-value:hover {
+            transform: scale(1.045);
+            box-shadow: 0 16px 48px #2229, 0 1.5px 0 #555;
+            background: rgba(57,70,104,0.96);
+        }
+        .stats-icon {
+            font-size: 2.6rem;
+            margin-bottom: 0.3rem;
+            opacity: 0.92;
+            text-shadow: 0 2px 16px #0006;
+        }
+        .stats-value {
+            font-size: 2.7rem;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+            display: block;
+            color: #fff;
+            text-shadow: 0 2px 12px #0008;
+        }
+        .stats-label {
+            color: #ffe066 !important;
+            font-size: 1.23rem !important;
+            font-weight: 700 !important;
+            text-shadow: 0 2px 8px #66580044;
+            letter-spacing: .04em;
+        }
+        .card-section {
+            border-radius: 1.5rem;
+            background: rgba(36, 38, 52, 0.95);
+            box-shadow: 0 4px 32px #181d2a88;
+            padding: 2rem 1.5rem;
+            margin-bottom: 2.2rem;
+            border: 1px solid #32344a;
+            backdrop-filter: blur(8px);
+        }
+        .card-section h2 {
+            color: #ffe066 !important;
+            font-size: 1.7rem !important;
+            font-weight: 900 !important;
+            letter-spacing: .05em;
+            text-shadow: 0 2px 12px #1a130080;
+            margin-bottom: 1.1rem !important;
+        }
+        .table-dark {
+            background: rgba(28, 30, 40, 0.94);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1.5px solid #3c425c;
+        }
+        .table-dark th, .table-dark td {
+            color: #f8faff;
+            font-size: 1.01rem;
+            vertical-align: middle;
+            background: none !important;
+        }
+        .table-dark th {
+            font-weight: 800;
+            letter-spacing: .04em;
+            background: rgba(39,48,71,0.86)!important;
+            color: #ffeeee;
+        }
+        .table-dark tr {
+            transition: background .13s;
+        }
+        .table-dark tr:hover {
+            background: #28304c99;
+        }
+        .list-group-item {
+            background: rgba(37,41,59,0.96);
+            color: #eaeaea;
+            border: 1px solid #343753;
+            border-radius: 0.65rem;
+            margin-bottom: 0.3rem;
+            padding: 0.75rem 1.2rem;
+            font-size: 1.06rem;
+        }
+        textarea, .form-control {
+            background: #23273a;
+            color: #f9f9fa;
+            border-radius: 0.5rem;
+            border: 1px solid #3a3f54;
+            font-size: 1.08rem;
+        }
+        .badge-danger {
+            background: #ea2d4d;
+            font-size: 0.97em;
+        }
+        .badge-success {
+            background: #42e37e;
+            color: #133e1b;
+            font-size: 0.97em;
+        }
+        .badge-warning {
+            background: #ffd43b;
+            color: #333;
+            font-size: 0.97em;
+        }
+        .badge-info {
+            background: #44aaf1;
+            font-size: 0.97em;
+        }
+        .fw-bolder {
+            font-weight: 900;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s;
+        }
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        #graficoAlertas, #graficoEmociones {
+            max-width: 360px !important;
+            max-height: 220px !important;
+            width: 100% !important;
+            height: 220px !important;
+            margin: 0 auto;
+            display: block;
+            background: #21242d;
+            border-radius: 1.3rem;
+            box-shadow: 0 3px 12px #0005;
+        }
+        #stream-video {
+            box-shadow: 0 2px 24px #2659ff2c;
+            border-radius: 18px;
+            background: #252a3b;
+            margin-bottom: 1rem;
+        }
+        #emocion-actual {
+            color: #f8e769;
+            font-size: 1.25rem;
+            text-shadow: 0 1px 10px #18180099;
+        }
+        .alert-danger {
+            background: linear-gradient(90deg, #6a202f 60%, #a74343 100%);
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+            letter-spacing: .05em;
+            border-radius: 1.1em;
+            border: none;
+            box-shadow: 0 2px 24px #2224;
+        }
+        .btn-warning {
+            background: #f7c147 !important;
+            border-color: #f7c147 !important;
+            color: #222 !important;
+            font-weight: 700;
+            box-shadow: 0 2px 16px #0002;
+        }
+        .btn-warning:hover {
+            background: #ffe19e !important;
+            color: #8e6d05 !important;
+            border-color: #ffecb4 !important;
+        }
+        ::-webkit-scrollbar {
+            width: 10px;
+            background: #21263a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #35395a;
+            border-radius: 6px;
+        }
+        @media (max-width: 900px) {
+            .d-flex.flex-row.align-items-center.justify-content-between {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            #graficoEmociones {
+                margin-bottom: 16px !important;
+            }
+            #leyenda-emociones {
+                margin-left: 0 !important;
+                text-align: left;
+            }
+        }
+        @media (max-width: 767px) {
+            .panel-title { font-size: 1.35rem; }
+            .card-section, .stats-card { padding: 1rem; }
+            .stats-value { font-size: 1.4rem; }
+            .stats-icon { font-size: 1.2rem; }
+            .card-section h2 { font-size: 1.1rem !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Modal Genérico para Detalles -->
+<div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="tituloDetalle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark text-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tituloDetalle"></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="contenidoDetalle" style="max-height: 65vh; overflow-y: auto;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+    <h1 class="mb-4 panel-title"><i class="bi bi-shield-check me-2"></i>Control Parental</h1>
+
+    <div id="alerta-emociones" class="alert alert-danger d-none mb-4 fade-in" role="alert">
+       🚫 El navegador fue cerrado por exceso de emociones negativas detectadas.
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-2">
+            <div class="stats-card text-center fade-in">
+                <div class="stats-icon text-primary mb-1"><i class="bi bi-globe"></i></div>
+                <span class="stats-value" id="paginas-web" style="cursor:pointer" onclick="mostrarDetalle('webs')">0</span>
+                <div class="stats-label">Webs</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stats-card text-center fade-in">
+                <div class="stats-icon text-info"><i class="bi bi-app-indicator"></i></div>
+                <span class="stats-value" id="programas"  style="cursor:pointer" onclick="mostrarDetalle('programas')">0</span>
+                <div class="stats-label">Programas</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stats-card text-center fade-in">
+                <div class="stats-icon text-warning"><i class="bi bi-exclamation-triangle"></i></div>
+                <span class="stats-value text-warning" id="alertas-emitidas" style="cursor:pointer" onclick="mostrarDetalle('alertas')">0</span>
+                <div class="stats-label">Alertas</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stats-card text-center fade-in">
+                <div class="stats-icon text-secondary"><i class="bi bi-eye"></i></div>
+                <span class="stats-value" id="total-visitas">0</span>
+                <div class="stats-label">Totales</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stats-card text-center fade-in">
+                <div class="stats-icon text-danger"><i class="bi bi-x-octagon"></i></div>
+                <span class="stats-value" id="programas-forzados"  style="cursor:pointer" onclick="mostrarDetalle('forzados')"  >0</span>
+                <div class="stats-label">Forzados</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-bar-chart-line"></i> Gráfica de estadísticas</h2>
+        <div style="max-width:360px;margin:auto;">
+            <canvas id="graficoAlertas"></canvas>
+        </div>
+    </div>
+
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-emoji-smile"></i> Emociones Generales</h2>
+        <div class="d-flex flex-row align-items-center justify-content-between" style="max-width:400px;margin:auto;">
+            <div style="max-width:220px;">
+                <canvas id="graficoEmociones"></canvas>
+            </div>
+            <div id="leyenda-emociones" class="ms-3" style="font-size:1.08em;">
+            </div>
+        </div>
+    </div>
+
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-camera-video"></i> Cámara en tiempo real</h2>
+        <div style="text-align:center;">
+            <img id="stream-video" style="max-width:320px; border-radius:16px; border:3px solid #2b2f3e;">
+            <div id="emocion-actual" style="font-size:1.2rem; margin-top:1em; font-weight:bold;"></div>
+        </div> 
+    </div>
+
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-clock-history"></i> Visitas recientes</h2>
+        <div style="max-height:320px; overflow-y:auto; border-radius:1rem;">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>	
+                        <th>URL / Programa</th>
+                        <th>Prohibida</th>
+                        <th>Categoría IA</th>
+                        <th>Fuente</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-visitas"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-shield-exclamation"></i> Lista Negra IA</h2>
+        <ul class="list-group" id="lista-negra"></ul>
+        <div class="text-end text-secondary mt-2" style="font-size:0.95em;">
+            Actualización automática cada 10 segundos
+        </div>
+    </div>
+    <div class="card-section mb-4">
+        <h2><i class="bi bi-key"></i> Palabras Clave de Bloqueo</h2>
+        <textarea id="input-palabras" class="form-control mb-2" rows="4"></textarea>
+        <button class="btn btn-warning" onclick="guardarPalabrasBloqueo()">
+            <i class="bi bi-save me-1"></i>Guardar Palabras
+        </button>
+    </div>
+</div>
+
+<script>
+let graficoEmociones = null;
+const socket = io();
+
+function mostrarDetalle(tipo) {
+    let url = "";
+    let titulo = "";
+    if (tipo === "webs") {
+        url = "/detalle_webs";
+        titulo = "Detalle de páginas web visitadas";
+    } else if (tipo === "programas") {
+        url = "/detalle_programas";
+        titulo = "Detalle de programas usados";
+    } else if (tipo === "alertas") {
+        url = "/detalle_alertas";
+        titulo = "Detalle de alertas emitidas";
+    } else if (tipo === "forzados") {
+        url = "/detalle_forzados";
+        titulo = "Detalle de cierres forzados";
+    } else {
+        return;
+    }
+
+    document.getElementById("tituloDetalle").textContent = titulo;
+    document.getElementById("contenidoDetalle").innerHTML = "<div class='text-center my-3'><div class='spinner-border text-info'></div><br>Cargando...</div>";
+    var modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+    modal.show();
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            let html = "<table class='table table-dark table-striped table-hover'>";
+            html += "<thead><tr>";
+            if (tipo === "webs") {
+                html += "<th>Fecha</th><th>URL</th><th>Prohibida</th><th>Categoría IA</th>";
+            } else if (tipo === "programas") {
+                html += "<th>Fecha</th><th>Programa</th><th>Prohibido</th><th>Categoría IA</th><th>Forzado</th>";
+            } else if (tipo === "alertas") {
+                html += "<th>Fecha</th><th>Fuente</th><th>URL/Programa</th><th>Categoría IA</th>";
+            } else if (tipo === "forzados") {
+                html += "<th>Fecha</th><th>Fuente</th><th>URL/Programa</th><th>Categoría IA</th><th>Prohibida</th>";
+            }
+            html += "</tr></thead><tbody>";
+            if (data.length === 0) {
+                html += `<tr><td colspan="8" class="text-center text-muted">Sin resultados</td></tr>`;
+            }
+            for (const v of data) {
+                html += "<tr>";
+                if (tipo === "webs") {
+                    html += `<td>${v.fecha}</td><td>${v.url}</td><td>${v.es_prohibida ? 'Sí' : 'No'}</td><td>${v.categoria_ia || ''}</td>`;
+                } else if (tipo === "programas") {
+                    html += `<td>${v.fecha}</td><td>${v.url}</td><td>${v.es_prohibida ? 'Sí' : 'No'}</td><td>${v.categoria_ia || ''}</td><td>${v.forzado_cierre ? 'Sí' : 'No'}</td>`;
+                } else if (tipo === "alertas") {
+                    html += `<td>${v.fecha}</td><td>${v.fuente}</td><td>${v.url}</td><td>${v.categoria_ia || ''}</td>`;
+                } else if (tipo === "forzados") {
+                    html += `<td>${v.fecha}</td><td>${v.fuente}</td><td>${v.url}</td><td>${v.categoria_ia || ''}</td><td>${v.es_prohibida ? 'Sí' : 'No'}</td>`;
+                }
+                html += "</tr>";
+            }
+            html += "</tbody></table>";
+            document.getElementById("contenidoDetalle").innerHTML = html;
+        });
+}
+
+function cargarPalabrasBloqueo() {
+    fetch('/palabras_bloqueo')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("input-palabras").value = data.join("\n");
+        });
+}
+
+function guardarPalabrasBloqueo() {
+    const texto = document.getElementById("input-palabras").value;
+    const lista = texto.split("\n").map(p => p.trim()).filter(p => p);
+    fetch('/palabras_bloqueo', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lista)
+    }).then(() => alert("✅ Palabras guardadas correctamente"));
+}
+
+function cargarVisitas() {
+    fetch('/visitas')
+        .then(r => r.json())
+        .then(data => {
+            let html = "";
+            for (const v of data) {
+                let badge = v.es_prohibida
+                    ? '<span class="badge badge-danger">Sí</span>'
+                    : '<span class="badge badge-success">No</span>';
+                let cat = v.categoria_ia 
+                    ? `<span class="badge badge-warning">${v.categoria_ia}</span>`
+                    : '';
+                html += `<tr>
+                    <td>${v.fecha}</td>
+                    <td><a href="${v.url}" target="_blank" style="color:#9cf">${v.url}</a></td>
+                    <td>${badge}</td>
+                    <td>${cat}</td>
+                    <td>${v.fuente || ''}</td>
+                </tr>`;
+            }
+            document.getElementById("tabla-visitas").innerHTML = html;
+        });
+}
+
+function cargarListaNegra() {
+    fetch('/lista_negra')
+        .then(r => r.json())
+        .then(data => {
+            let html = "";
+            for (const url of data) {
+                html += `<li class="list-group-item">${url}</li>`;
+            }
+            document.getElementById("lista-negra").innerHTML = html;
+        });
+}
+
+function cargarStats() {
+    fetch('/estadisticas')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("total-visitas").textContent = data.visitas_totales;
+            document.getElementById("alertas-emitidas").textContent = data.alertas_emitidas;
+            document.getElementById("paginas-web").textContent = data.paginas_web;
+            document.getElementById("programas").textContent = data.programas;
+            document.getElementById("programas-forzados").textContent = data.programas_forzados || 0;
+            actualizarGrafico(data.visitas_totales, data.alertas_emitidas, data.paginas_web, data.programas, data.programas_forzados);
+        });
+}
+
+let grafico = null;
+function actualizarGrafico(visitas, alertas, paginasWeb, programas, programasForzados) {
+    if (grafico) {
+        grafico.data.datasets[0].data = [visitas, alertas, paginasWeb, programas, programasForzados];
+        grafico.update();
+        return;
+    }
+    const ctx = document.getElementById('graficoAlertas').getContext('2d');
+    grafico = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Totales', 'Alertas', 'Webs', 'Programas', 'Forzados'],
+            datasets: [{
+                label: 'Cantidad',
+                data: [visitas, alertas, paginasWeb, programas, programasForzados],
+                backgroundColor: ['#3777ff', '#dc3545', '#28a745', '#17a2b8', '#ffc107']
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+const EMOJIS_EMOCIONES = {
+    "feliz": "😄",
+    "triste": "😢",
+    "neutral": "😐",
+    "enojado": "😠",
+    "asustado": "😨",
+    "sorprendido": "😮",
+    "cansado": "😴",
+    "desconocida": "❓",
+    "no detectada": "❌"
+};
+
+const COLORES_EMOCIONES = {
+    "feliz": "#f0ad4e",
+    "triste": "#5bc0de",
+    "neutral": "#6c757d",
+    "enojado": "#d9534f",
+    "asustado": "#0275d8",
+    "sorprendido": "#6f42c1",
+    "cansado": "#999966",
+    "desconocida": "#b0b0b0",
+    "no detectada": "#a0a0a0"
+};
+
+function mostrarLeyendaEmociones(data) {
+    let html = '<div style="line-height:2">';
+    for (const emocion of Object.keys(data)) {
+        const emoji = EMOJIS_EMOCIONES[emocion] || "❔";
+        const color = COLORES_EMOCIONES[emocion] || "#aaa";
+        html += `<span style="display:inline-block;min-width:30px;text-align:center;">
+            <span style="font-size:1.4em;">${emoji}</span>
+            <span style="background:${color};border-radius:0.6em;padding:0.18em 0.6em;margin-left:0.25em;color:#fff;font-weight:500">${emocion}</span>
+        </span><br>`;
+    }
+    html += "</div>";
+    document.getElementById("leyenda-emociones").innerHTML = html;
+}
+
+function actualizarGraficoEmociones(data) {
+    const ctx = document.getElementById('graficoEmociones').getContext('2d');
+    const labels = Object.keys(data);
+    const valores = Object.values(data);
+    const colores = labels.map(emocion => COLORES_EMOCIONES[emocion] || '#aaa');
+
+    if (graficoEmociones) {
+        graficoEmociones.data.labels = labels;
+        graficoEmociones.data.datasets[0].data = valores;
+        graficoEmociones.data.datasets[0].backgroundColor = colores;
+        graficoEmociones.options.plugins.legend.labels.color = '#ffe066';
+        graficoEmociones.options.plugins.legend.labels.font = { size: 16, weight: 'bold' };
+        graficoEmociones.update();
+    } else {
+        graficoEmociones = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: colores
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    mostrarLeyendaEmociones(data);
+}
+
+function cargarEmocionesGenerales() {
+    fetch('/emociones_generales')
+        .then(r => r.json())
+        .then(data => actualizarGraficoEmociones(data));
+}
+
+setInterval(cargarEmocionesGenerales, 7000);
+cargarEmocionesGenerales();
+
+socket.on('nueva_visita', (data) => {
+    cargarStats();
+    cargarVisitas();
+    cargarListaNegra();
+
+    if (data.es_prohibida || data.forzado_cierre) {
+        let tipo = data.forzado_cierre ? 'warning' : 'error';
+        let titulo = data.forzado_cierre ? '¡Cierre forzado de programa!' : '¡Alerta de contenido!';
+        let mensaje = "";
+
+        if (data.fuente === "chrome") {
+            mensaje = `Se detectó una página web prohibida:\n${data.url}\nCategoría IA: ${data.categoria_ia || 'N/A'}`;
+        } else if (data.fuente === "programa") {
+            mensaje = `Se detectó un programa prohibido o cierre forzado:\n${data.url}\nCategoría IA: ${data.categoria_ia || 'N/A'}`;
+        } else {
+            mensaje = `Alerta:\n${data.url}`;
+        }
+        Swal.fire({
+            icon: tipo,
+            title: titulo,
+            text: mensaje,
+            confirmButtonColor: "#f7c147"
+        });
+    }
+});
+
+socket.on("navegador_cerrado_alerta", (data) => {
+    Swal.fire({
+        icon: 'error',
+        title: '¡Alerta de emociones negativas!',
+        text: data.motivo || "Se detectó un exceso de emociones negativas.",
+        confirmButtonColor: "#f7c147"
+    });
+    const alerta = document.getElementById("alerta-emociones");
+    alerta.classList.remove("d-none");
+    alerta.textContent = "🚫 " + data.motivo;
+    setTimeout(() => {
+        alerta.classList.add("d-none");
+    }, 10000);
+});
+
+socket.on("stream_frame", function(data){
+    if (!data.frame || data.emocion === "sin rostro") {
+        document.getElementById("stream-video").src = "";
+        document.getElementById("emocion-actual").textContent = "No se detectó rostro en la cámara";
+        return;
+    }
+    document.getElementById("stream-video").src = "data:image/jpeg;base64," + data.frame;
+    document.getElementById("emocion-actual").textContent =
+        "Emoción: " + (data.emocion || "detectando...") + " (" + (Math.round((data.confianza || 0)*100)) + "%)";
+});
+
+cargarVisitas();
+cargarListaNegra();
+cargarStats();
+cargarPalabrasBloqueo();
+setInterval(cargarVisitas, 5000);
+setInterval(cargarListaNegra, 10000);
+setInterval(cargarStats, 6000);
+</script>
+</body>
+</html>
